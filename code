@@ -1,0 +1,125 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+
+export default function GovBoard() {
+  const [meetings, setMeetings] = useState([]);
+  const [meetingTitle, setMeetingTitle] = useState("");
+  const [agendaItems, setAgendaItems] = useState([]);
+  const [newAgendaItem, setNewAgendaItem] = useState("");
+  const [votes, setVotes] = useState({});
+  const [minutes, setMinutes] = useState("");
+  const [aiSummary, setAiSummary] = useState("");
+  
+  const addMeeting = () => {
+    if (meetingTitle.trim()) {
+      setMeetings([...meetings, { title: meetingTitle, agenda: [], votes: {} }]);
+      setMeetingTitle("");
+    }
+  };
+  
+  const addAgendaItem = (index) => {
+    if (newAgendaItem.trim()) {
+      const updatedMeetings = [...meetings];
+      updatedMeetings[index].agenda.push(newAgendaItem);
+      updatedMeetings[index].votes[newAgendaItem] = { yes: 0, no: 0 };
+      setMeetings(updatedMeetings);
+      setNewAgendaItem("");
+    }
+  };
+  
+  const vote = (meetingIndex, agendaItem, choice) => {
+    const updatedMeetings = [...meetings];
+    if (choice === "Yes") {
+      updatedMeetings[meetingIndex].votes[agendaItem].yes += 1;
+    } else {
+      updatedMeetings[meetingIndex].votes[agendaItem].no += 1;
+    }
+    setMeetings(updatedMeetings);
+  };
+
+  const generateAiSummary = () => {
+    const summary = `Meeting Summary:\n${meetings.map(meeting => `\nTitle: ${meeting.title}\nAgenda:\n${meeting.agenda.map(item => `- ${item} (Yes: ${meeting.votes[item]?.yes || 0}, No: ${meeting.votes[item]?.no || 0})`).join("\n")}`).join("\n\n")}`;
+    setAiSummary(summary);
+  };
+
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">GovBoard - Meeting Management</h1>
+      
+      <Tabs defaultValue="dashboard">
+        <TabsList>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="meetings">Meetings</TabsTrigger>
+          <TabsTrigger value="voting">Voting</TabsTrigger>
+          <TabsTrigger value="minutes">Minutes</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="dashboard">
+          <h2 className="text-xl font-semibold">Dashboard</h2>
+          <p>View upcoming meetings, pending decisions, and action items.</p>
+        </TabsContent>
+        
+        <TabsContent value="meetings">
+          <div className="flex gap-2 mb-4">
+            <Input value={meetingTitle} onChange={(e) => setMeetingTitle(e.target.value)} placeholder="Meeting Title" />
+            <Button onClick={addMeeting}>Add Meeting</Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {meetings.map((meeting, meetingIndex) => (
+              <Card key={meetingIndex}>
+                <CardContent>
+                  <h2 className="text-xl font-semibold">{meeting.title}</h2>
+                  <div className="flex gap-2 mt-2">
+                    <Input value={newAgendaItem} onChange={(e) => setNewAgendaItem(e.target.value)} placeholder="Add Agenda Item" />
+                    <Button onClick={() => addAgendaItem(meetingIndex)}>Add</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="voting">
+          <h2 className="text-xl font-semibold">Voting & Decision Log</h2>
+          <Table className="mt-4">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Meeting</TableHead>
+                <TableHead>Agenda Item</TableHead>
+                <TableHead>Votes</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {meetings.map((meeting, meetingIndex) => (
+                meeting.agenda.map((item, agendaIndex) => (
+                  <TableRow key={`${meetingIndex}-${agendaIndex}`}>
+                    <TableCell>{meeting.title}</TableCell>
+                    <TableCell>{item}</TableCell>
+                    <TableCell>
+                      Yes: {meeting.votes[item]?.yes || 0} / No: {meeting.votes[item]?.no || 0}
+                      <Button onClick={() => vote(meetingIndex, item, "Yes")} className="ml-2">Yes</Button>
+                      <Button onClick={() => vote(meetingIndex, item, "No")} className="ml-2">No</Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ))}
+            </TableBody>
+          </Table>
+        </TabsContent>
+        
+        <TabsContent value="minutes">
+          <h2 className="text-xl font-semibold">Meeting Minutes & Reports</h2>
+          <Textarea value={minutes} onChange={(e) => setMinutes(e.target.value)} placeholder="Type meeting minutes here..." className="w-full mt-2" />
+          <Button className="mt-2" onClick={generateAiSummary}>Generate AI Summary</Button>
+          {aiSummary && <pre className="mt-4 p-2 border border-gray-300 rounded bg-gray-100">{aiSummary}</pre>}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
